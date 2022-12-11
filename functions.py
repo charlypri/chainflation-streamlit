@@ -184,16 +184,16 @@ def getTotalInflation(categs_df):
     return categories_month_infl
 
 
-# get product prices
-prod_prices  = getProductPrices()
+# # get product prices
+# prod_prices  = getProductPrices()
 
-# Get inflation per product
+# # Get inflation per product
 
-prod_infl = getProductInflation(prod_prices, 30) 
+# prod_infl = getProductInflation(prod_prices, 30) 
 
-# Get inflation per category 
-category_infl = getCategoriesInflation(prod_infl)
+# # Get inflation per category 
+# category_infl = getCategoriesInflation(prod_infl)
 
 
-# Get total inflation
-total = getTotalInflation(category_infl)
+# # Get total inflation
+# total = getTotalInflation(category_infl)
