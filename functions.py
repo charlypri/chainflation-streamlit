@@ -9,6 +9,7 @@ import sys
 from datetime import datetime, time, timedelta
 import time as t
 from statistics import mean
+import os
 
 pd.set_option("display.max_columns", None)
 
@@ -16,7 +17,7 @@ DATABASE = "chainflation"
 
 
 def getAlimentacionJson():
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(os.environ['chainflation_mongo'])
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["alimentacion"]
@@ -26,7 +27,7 @@ def getAlimentacionJson():
     return records
 
 def getViviendaJson():
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(os.environ['chainflation_mongo'])
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["vivienda"]
@@ -36,7 +37,7 @@ def getViviendaJson():
     return records
 
 def getEnergiaJson():
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(os.environ['chainflation_mongo'])
     mydb = myclient[DATABASE]
     
     alim_collect = mydb["energia"]
