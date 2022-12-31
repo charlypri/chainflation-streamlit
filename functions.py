@@ -1,13 +1,9 @@
-import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import matplotlib.pyplot as plt
 
 import pymongo
-import sys
 from datetime import datetime, time, timedelta
-import time as t
 from statistics import mean
 import os
 
@@ -55,22 +51,23 @@ def calcInflationProds(sector_df, ago):
     total_days = len(sector_df.fecha.unique())
     
     record_date = sector_df.fecha.max() #last day recorded
-    ref_date =(record_date- timedelta(days=ago)) # Day to compare with
+    ref_date =(record_date - timedelta(days=ago)) # Day to compare with
     inflations_products = pd.DataFrame()
     while total_days > 0:
         
-        start_prices = sector_df[sector_df['fecha'] == record_date].sort_values(by=['producto'])
-        end_prices = sector_df[sector_df['fecha'] == ref_date].sort_values(by=['producto'])
+        end_prices = sector_df[sector_df['fecha'] == record_date].groupby(["producto", "fecha"]).mean().sort_values(by=['producto']).reset_index()
+        start_prices = sector_df[sector_df['fecha'] == ref_date].groupby(["producto", "fecha"]).mean().sort_values(by=['producto']).reset_index()
 
-        if len(start_prices) == 0:
+        if len(end_prices) == 0:
             record_date =(record_date - timedelta(days=1))
             continue
-        elif len(end_prices) == 0:
+        elif len(start_prices) == 0:
             ref_date =(ref_date - timedelta(days=1))
             total_days -= 1
             continue
-        start_prices['inflation'] = ((start_prices.loc[:,'precio'].values - end_prices.loc[:,'precio'].values )/end_prices.loc[:,'precio'].values)*100
-        inflations_products = pd.concat([inflations_products, start_prices], ignore_index=True)
+        prices = pd.merge(start_prices, end_prices, on='producto', how='inner', suffixes=('_ref', ''))
+        prices["inflation"] = ((prices["precio"] - prices["precio_ref"]) / prices["precio_ref"]) *100
+        inflations_products = pd.concat([inflations_products, prices], ignore_index=True)
         
         # print(f'Stored inflation for: {record_date}')
         # print(f'Reference date : {ref_date}')
@@ -153,10 +150,11 @@ def getProductPrices():
 
     prod_prices['energia'] = pd.json_normalize(getEnergiaJson())
     prod_prices['vivienda'] = pd.json_normalize(getViviendaJson())
-    prod_prices['alimentacion'] = pd.json_normalize(getAlimentacionJson())
+    prod_prices['alimentacion'] = standardize_prices(pd.json_normalize(getAlimentacionJson()))
 
     prod_prices['energia'].rename(columns = {'combustible':'producto'}, inplace = True)
     prod_prices['vivienda'].rename(columns = {'tipo':'producto'}, inplace = True)
+    prod_prices['alimentacion'].rename(columns = {'tienda':'fuente'}, inplace = True)
 
     return prod_prices
 
@@ -184,6 +182,44 @@ def getTotalInflation(categs_df):
     return categories_month_infl
 
 
+def standardize_prices(df):
+    # Create a new column for the standardized price
+    df['standardized_price'] = 0
+
+    # Iterate over each row in the DataFrame
+    for index, row in df.iterrows():
+        # Get the price, unit, and quantity for the current row
+        price = row['precio']
+        unit = row['unidad'].lower()
+        quantity = row['cantidad']
+        elements = row['elementos']
+
+        # Check the unit and convert the price to the standardized format (price per kilogram or liter)
+        if unit == 'kg':
+            standardized_price = price / (quantity * elements)
+        elif unit == 'gr':
+            standardized_price = (price ) / ((quantity/ 1000) * elements)
+        elif unit == 'l':
+            standardized_price = price / (quantity * elements)
+        elif unit == 'cl':
+            standardized_price = (price ) / ((quantity / 1000) * elements)
+        elif unit == 'ml':
+            standardized_price = (price ) / ((quantity / 1000) * elements)
+        elif unit == 'docena':
+            standardized_price = (price / 12) / (quantity * elements)
+        elif unit == 'ud.':
+            standardized_price = (price / 1) / (quantity * elements)
+        elif unit == 'uds':
+            standardized_price = (price / 1) / (quantity * elements)
+        else:
+            # If the unit is not recognized, set the standardized price to 0
+            standardized_price = 0
+
+        # Set the standardized price for the current row
+        df.at[index, 'precio'] = standardized_price
+
+    # Return the modified DataFrame
+    return df
 # # get product prices
 # prod_prices  = getProductPrices()
 
