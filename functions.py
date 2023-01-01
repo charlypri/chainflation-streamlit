@@ -183,8 +183,6 @@ def getTotalInflation(categs_df):
 
 
 def standardize_prices(df):
-    # Create a new column for the standardized price
-    df['standardized_price'] = 0
 
     # Iterate over each row in the DataFrame
     for index, row in df.iterrows():
