@@ -200,7 +200,7 @@ def standardize_prices(df):
         elif unit == 'l':
             standardized_price = price / (quantity * elements)
         elif unit == 'cl':
-            standardized_price = (price ) / ((quantity / 1000) * elements)
+            standardized_price = (price ) / ((quantity / 100) * elements)
         elif unit == 'ml':
             standardized_price = (price ) / ((quantity / 1000) * elements)
         elif unit == 'docena':
