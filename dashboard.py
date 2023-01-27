@@ -36,7 +36,7 @@ def loadData():
 
 def plot_priceTime(prod_params):
 
-    fig = px.line(prod_prices[prod_prices['fuente'] == prod_params], x="fecha", y="precio", color= "producto")
+    fig = px.line(prod_prices[(prod_prices['fuente'] == prod_params) & (prod_prices['fecha'] > "2022-12-29")], x="fecha", y="precio", color= "producto")
     fig.update_layout(
         title=f"Precios {prod_params}",
         xaxis_title="Fecha",
@@ -56,7 +56,7 @@ def plot_prod_infTime(prod_params):
 
 def plot_prod_comTime(prod_params):
 
-    fig = px.line(prod_prices[prod_prices['producto'] == prod_params ], x="fecha", y="precio", color='fuente')
+    fig = px.line(prod_prices[(prod_prices['producto'] == prod_params) & (prod_prices['fecha'] > "2022-12-29")], x="fecha", y="precio", color='fuente')
     fig.update_layout(
         title=f"Precio por supermercado",
         xaxis_title="Fecha",
@@ -139,8 +139,8 @@ if selected == "Inflation":
     # PARAMETROS
 
     st.subheader(f"Histórico de inflación")
-
-    fig = px.line(total, x="fecha", y="inflation", color='category')
+    
+    fig = px.line(total[total['fecha'] > "2022-11-29"], x="fecha", y="inflation", color='category', markers=True)
     fig.update_layout(
         title=f"Inflación por productos",
         xaxis_title="Fecha",

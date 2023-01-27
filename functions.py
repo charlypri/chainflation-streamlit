@@ -191,30 +191,36 @@ def standardize_prices(df):
         unit = row['unidad'].lower()
         quantity = row['cantidad']
         elements = row['elementos']
-
-        # Check the unit and convert the price to the standardized format (price per kilogram or liter)
-        if unit == 'kg':
-            standardized_price = price / (quantity * elements)
-        elif unit == 'gr':
-            standardized_price = (price ) / ((quantity/ 1000) * elements)
-        elif unit == 'l':
-            standardized_price = price / (quantity * elements)
-        elif unit == 'cl':
-            standardized_price = (price ) / ((quantity / 100) * elements)
-        elif unit == 'ml':
-            standardized_price = (price ) / ((quantity / 1000) * elements)
-        elif unit == 'docena':
-            standardized_price = (price / 12) / (quantity * elements)
-        elif unit == 'ud.':
-            standardized_price = (price / 1) / (quantity * elements)
-        elif unit == 'uds':
-            standardized_price = (price / 1) / (quantity * elements)
+        
+        if row['tienda'] != 'Carrefour':
+            # Check the unit and convert the price to the standardized format (price per kilogram or liter)
+            if unit.lower()  == 'kg':
+                standardized_price = price / (quantity * elements)
+            elif unit.lower() in ['gr', 'g']:
+                standardized_price = (price ) / ((quantity/ 1000) * elements)
+            elif unit.lower() == 'l':
+                standardized_price = price / (quantity * elements)
+            elif unit.lower() == 'cl':
+                standardized_price = (price ) / ((quantity / 100) * elements)
+            elif unit.lower() == 'ml':
+                standardized_price = (price ) / ((quantity / 1000) * elements)
+            elif unit.lower() == 'docena':
+                standardized_price = (price / 12) / (quantity * elements)
+            elif unit.lower() in ['ud.', 'uds']:
+                standardized_price = price / (quantity * elements)
+            else:
+                # If the unit is not recognized, set the standardized price to 0
+                standardized_price = row['precio']
         else:
-            # If the unit is not recognized, set the standardized price to 0
-            standardized_price = 0
-
+            if unit.lower() == 'docena':
+                standardized_price = (price / 12) / (quantity * elements)
+            elif unit.lower() in ['ud.', 'uds']:
+                standardized_price = price / (quantity * elements)
+            else:
+                standardized_price = price / (quantity)
         # Set the standardized price for the current row
         df.at[index, 'precio'] = standardized_price
+        df['precio'] = df['precio'].apply(lambda x: round(x, 3))
 
     # Return the modified DataFrame
     return df
