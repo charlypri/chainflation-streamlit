@@ -55,8 +55,8 @@ def calcInflationProds(sector_df, ago):
     inflations_products = pd.DataFrame()
     while total_days > 0:
         
-        end_prices = sector_df[sector_df['fecha'] == record_date].groupby(["producto", "fecha"]).mean().sort_values(by=['producto']).reset_index()
-        start_prices = sector_df[sector_df['fecha'] == ref_date].groupby(["producto", "fecha"]).mean().sort_values(by=['producto']).reset_index()
+        end_prices = sector_df[sector_df['fecha'] == record_date].groupby(["producto", "fecha"]).mean(numeric_only=True).sort_values(by=['producto']).reset_index()
+        start_prices = sector_df[sector_df['fecha'] == ref_date].groupby(["producto", "fecha"]).mean(numeric_only=True).sort_values(by=['producto']).reset_index()
 
         if len(end_prices) == 0:
             record_date =(record_date - timedelta(days=1))
@@ -150,7 +150,8 @@ def getProductPrices():
 
     prod_prices['energia'] = pd.json_normalize(getEnergiaJson())
     prod_prices['vivienda'] = pd.json_normalize(getViviendaJson())
-    prod_prices['alimentacion'] = standardize_prices(pd.json_normalize(getAlimentacionJson()))
+    # prod_prices['alimentacion'] = standardize_prices(pd.json_normalize(getAlimentacionJson()))
+    prod_prices['alimentacion'] = pd.json_normalize(getAlimentacionJson())
 
     prod_prices['energia'].rename(columns = {'combustible':'producto'}, inplace = True)
     prod_prices['vivienda'].rename(columns = {'tipo':'producto'}, inplace = True)
