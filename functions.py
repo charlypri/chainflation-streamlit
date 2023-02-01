@@ -152,6 +152,7 @@ def getProductPrices():
     prod_prices['vivienda'] = pd.json_normalize(getViviendaJson())
     # prod_prices['alimentacion'] = standardize_prices(pd.json_normalize(getAlimentacionJson()))
     prod_prices['alimentacion'] = pd.json_normalize(getAlimentacionJson())
+    prod_prices['alimentacion']["precio"] = prod_prices['alimentacion']["precio_referencia"] 
 
     prod_prices['energia'].rename(columns = {'combustible':'producto'}, inplace = True)
     prod_prices['vivienda'].rename(columns = {'tipo':'producto'}, inplace = True)
