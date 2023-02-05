@@ -5,7 +5,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 
 import pymongo
-from datetime import datetime, time
+from datetime import datetime, time, date
 
 # Import for navbar
 from streamlit_option_menu import option_menu
@@ -64,18 +64,23 @@ def plot_prod_comTime(prod_params):
     )
     return fig
 
+def filter_df_by_date(df, inicio, final):
+    df["fecha"] = pd.to_datetime(df["fecha"])
+
+    df = df[(df["fecha"]> pd.to_datetime(inicio)) & (df["fecha"] < pd.to_datetime(final))]
+
+    return df
 
 with st.sidebar:
     selected = option_menu(
         "",
-        ["Inflation", 'Sectores'],
+        ["Inflación", 'Sectores'],
         # icons=["bi-joystick"],
         menu_icon="",
         default_index=0,
     )
 
 # Load data into the dataframe.
-data = loadData()
 prods_prices, prods_infl, categories_infl, total = loadData()
 
 if selected == "Sectores":
@@ -83,7 +88,7 @@ if selected == "Sectores":
     # SECCION DE PRECIOS SEGUN SECTOR Y SOURCES
     # PARAMETROS
     st.subheader(f"Histórico de precios del sector:")
-    col1, col2 = st.columns(2)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         param_cesta = st.selectbox(
             "Select the sector", ['alimentacion', 'energia', 'vivienda']
@@ -99,10 +104,17 @@ if selected == "Sectores":
 
     with col2:
         param_prod = st.selectbox(
-            "Select the source", 
+            "Selecciona la fuente", 
             sources_names
         )
-
+    
+    with col3:
+        inicio = st.date_input("Fecha inicio", date(2023, 1, 1))
+    
+    with col4:
+        final = st.date_input("Fecha final", date.today())
+    
+    prod_prices = filter_df_by_date(prod_prices, inicio, final)
     
     fig = plot_priceTime(param_prod)
     st.plotly_chart(fig)
@@ -112,7 +124,7 @@ if selected == "Sectores":
             f"Compara precios entre supermercados:"
         )
         param_prod = st.selectbox(
-            "Select the product to compare", 
+            "Selecciona el producto a comparar", 
             product_names
         )
         fig = plot_prod_comTime(param_prod)
@@ -130,12 +142,12 @@ if selected == "Sectores":
     fig = plot_prod_infTime(param_prod)
     st.plotly_chart(fig)
 
-    # SECCION DE DATOS RAW
-    st.subheader("MAIN TABLE")
-    st.dataframe(prod_infl[prod_infl['producto'].isin(param_prod)], width=1400, height=500)
+    # # SECCION DE DATOS RAW
+    # st.subheader("MAIN TABLE")
+    # st.dataframe(prod_infl[prod_infl['producto'].isin(param_prod)], width=1400, height=500)
 
 
-if selected == "Inflation":
+if selected == "Inflación":
     # PARAMETROS
 
     st.subheader(f"Histórico de inflación")

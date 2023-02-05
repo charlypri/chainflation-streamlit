@@ -27,7 +27,7 @@ def getViviendaJson():
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["vivienda"]
-    cursor  = alim_collect.find({},{"_id":0}).sort("fecha", 1)
+    cursor  = alim_collect.find({"provincia":"España", "fecha": {"$gte": datetime(2018,1,1)}},{"_id":0}).sort("fecha", 1)
     records = list(cursor)
     
     return records
@@ -88,13 +88,23 @@ def calcCategoriesInflation(inflations_product, sector):
         daily_inflations = inflations_product[inflations_product['fecha'] == date]['inflation'].values
 
         pesos = {
-            'alimentacion': [   0.1428, # Aceite
-                0.1428, # arroz
-                0.1428, # leche
-                0.1428, # pollo
-                0.1428, # fruta
-                0.1428, # cerveza
-                0.1428 # azucar
+            'alimentacion': [   0.05882, # Aceite
+                0.05882, # mantequilla
+                0.05882, # arroz
+                0.05882, # maiz
+                0.05882, # garbanzos
+                0.05882, # alubias
+                0.05882, # patata
+                0.05882, # azucar
+                0.05882, # pescado
+                0.05882, # huevos
+                0.05882, # pollo
+                0.05882, # leche
+                0.05882, # agua
+                0.05882, # cafe
+                0.05882, # cerveza
+                0.05882, # platano
+                0.05882, # manzana
             ],
             'energia': [   
                 0.1, # Sin Plomo 95
