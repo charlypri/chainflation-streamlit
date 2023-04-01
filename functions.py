@@ -76,8 +76,6 @@ def calcInflationFuentes(sector_df, ago):
 
 def calcInflationProds(sector_df, ago):
     sector_df.fecha = sector_df.fecha.apply(lambda x: datetime(x.year, x.month, x.day)).copy() # Keep only Year,Month,Day
-
-    total_days = len(sector_df.fecha.unique())
     
     record_date = sector_df.fecha.max() #last day recorded
     ref_date =(record_date - timedelta(days=ago)) # Day to compare with
