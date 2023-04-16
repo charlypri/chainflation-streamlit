@@ -38,10 +38,8 @@ def loadData():
 
 def plot_priceTime(prod_params):
 
-    if prod_params in ["realAdvisor"]:
-        fig = px.line(prod_prices[(prod_prices['fuente'] == prod_params)], x="fecha", y="precio", color= "provincia")
-    else:
-        fig = px.line(prod_prices[(prod_prices['fuente'] == prod_params)], x="fecha", y="precio", color= "producto")
+    
+    fig = px.line(prod_prices[(prod_prices['fuente'] == prod_params)], x="fecha", y="precio", color= "producto")
     fig.update_layout(
         title=f"Precios {prod_params}",
         xaxis_title="Fecha",
