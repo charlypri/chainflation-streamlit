@@ -20,7 +20,7 @@ st.title("Chainflation Data Sources")
 def loadData():
 
     # get product prices
-    prod_prices  = getProductPrices()
+    prod_prices  = getProductPrices(st.secrets["DB_SECRET"])
 
     # # Get inflation per soruce
     sources_infl = getSourcesInflation(prod_prices, 30)

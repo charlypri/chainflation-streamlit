@@ -6,15 +6,14 @@ import pymongo
 from datetime import datetime, time, timedelta
 from statistics import mean
 import os
-import streamlit as st
 
 pd.set_option("display.max_columns", None)
 
 DATABASE = "chainflation"
 year_date = datetime.now() - timedelta(days=365)
 
-def getAlimentacionJson():
-    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
+def getAlimentacionJson(secret):
+    myclient = pymongo.MongoClient(secret)
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["alimentacion"]
@@ -23,8 +22,8 @@ def getAlimentacionJson():
     
     return records
 
-def getViviendaJson():
-    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
+def getViviendaJson(secret):
+    myclient = pymongo.MongoClient(secret)
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["vivienda"]
@@ -33,8 +32,8 @@ def getViviendaJson():
     
     return records
 
-def getEnergiaJson():
-    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
+def getEnergiaJson(secret):
+    myclient = pymongo.MongoClient(secret)
     mydb = myclient[DATABASE]
     
     alim_collect = mydb["energia"]
@@ -178,13 +177,13 @@ def calcTotalInflation(inflations_categ):
 
     return total_inflations
 
-def getProductPrices():
+def getProductPrices(secret):
     prod_prices = {}
 
-    prod_prices['energia'] = pd.json_normalize(getEnergiaJson())
-    prices_vivienda = pd.json_normalize(getViviendaJson())
+    prod_prices['energia'] = pd.json_normalize(getEnergiaJson(secret))
+    prices_vivienda = pd.json_normalize(getViviendaJson(secret))
     prod_prices['vivienda'] = prices_vivienda.loc[~((prices_vivienda['fuente'] == 'idealista') & (prices_vivienda['provincia'] == 'Madrid'))].copy()
-    prod_prices['alimentacion'] = pd.json_normalize(getAlimentacionJson())
+    prod_prices['alimentacion'] = pd.json_normalize(getAlimentacionJson(secret))
     prod_prices['alimentacion']["precio"] = prod_prices['alimentacion']["precio_referencia"] 
 
     prod_prices['energia'].rename(columns = {'combustible':'producto'}, inplace = True)
