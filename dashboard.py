@@ -15,12 +15,12 @@ from functions import *
 st.set_page_config(page_title="Chainflation - Dashboard",layout="wide")
 st.title("Chainflation Data Sources")
 
-
+mongo_client = pymongo.MongoClient(st.secrets["DB_SECRET"])
 @st.cache(hash_funcs={"pymongo.mongo_client.MongoClient": id}) 
 def loadData():
 
     # get product prices
-    prod_prices  = getProductPrices(st.secrets["DB_SECRET"])
+    prod_prices  = getProductPrices(mongo_client)
 
     # # Get inflation per soruce
     sources_infl = getSourcesInflation(prod_prices, 30)
