@@ -15,7 +15,7 @@ from functions import *
 st.set_page_config(page_title="Chainflation - Dashboard",layout="wide")
 st.title("Chainflation Data Sources")
 
-@st.experimental_memo()
+st.cache_resource
 def get_mongo_client():
     mongo_client = pymongo.MongoClient(st.secrets["DB_SECRET"])
     return mongo_client
