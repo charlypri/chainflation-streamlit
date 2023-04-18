@@ -15,11 +15,11 @@ from functions import *
 st.set_page_config(page_title="Chainflation - Dashboard",layout="wide")
 st.title("Chainflation Data Sources")
 
-@st.cache_data
+@st.cache_resource
 def get_mongo_client():
     mongo_client = pymongo.MongoClient(st.secrets["DB_SECRET"])
     return mongo_client
-@st.cache(hash_funcs={"pymongo.mongo_client.MongoClient": id}) 
+@st.cache_data 
 def loadData():
     mongo_client = get_mongo_client()
     # get product prices
