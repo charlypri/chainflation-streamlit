@@ -19,9 +19,10 @@ st.title("Chainflation Data Sources")
 def get_mongo_client():
     mongo_client = pymongo.MongoClient(st.secrets["DB_SECRET"])
     return mongo_client
-mongo_client = get_mongo_client() 
+
 @st.cache_data 
 def loadData():
+    mongo_client = get_mongo_client() 
     # get product prices
     prod_prices  = getProductPrices(mongo_client)
 
