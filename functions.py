@@ -242,7 +242,7 @@ def normalize_luz(energy_prices):
     return energy_prices
 
 def preprocess_vivienda(vivienda_prices):
-    vivienda_prices = vivienda_prices[vivienda_prices["provincia"] == 'España']
+    vivienda_prices = vivienda_prices[(vivienda_prices["provincia"] == 'España') & (vivienda_prices["fuente"] == 'realAdvisor')]
     return vivienda_prices
 
 # # get product prices
