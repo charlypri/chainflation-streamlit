@@ -13,6 +13,8 @@ from streamlit_option_menu import option_menu
 # from functions import *
 import gold_layer as gold_functions
 
+
+############ THIS DASHBOARD IS THE OLD VERSION. IT IS STILL HERE BECASUE THE FUNCTIONALITIES TO SHOW THE PRICES WITHOUT AGGREGATING IT BY MONTHS SHOULD BE KEPT, AND ALSO SHOWING MoM INFLATION   ################
 st.set_page_config(page_title="Chainflation - Dashboard",layout="wide")
 st.title("Chainflation Data Sources")
 
