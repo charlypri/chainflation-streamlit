@@ -18,8 +18,7 @@ st.title("Chainflation Data Sources")
 
 @st.cache_resource
 def get_mongo_client():
-    # mongo_client = pymongo.MongoClient(st.secrets["DB_SECRET"])
-    mongo_client = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    mongo_client = pymongo.MongoClient(st.secrets["DB_SECRET"])
     return mongo_client
 
 @st.cache_data 

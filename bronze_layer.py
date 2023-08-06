@@ -3,7 +3,7 @@ import pandas as pd
 import pymongo
 from datetime import datetime, timedelta
 from typing import Dict
-
+import streamlit as st
 pd.set_option("display.max_columns", None)
 
 DATABASE = "chainflation"
@@ -17,7 +17,7 @@ def getAlimentacionJson():
     Returns:
         list: A list of dictionaries containing alimentacion records.
     """
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["alimentacion"]
@@ -33,7 +33,7 @@ def getViviendaJson():
     Returns:
         list: A list of dictionaries containing vivienda records.
     """
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["vivienda"]
@@ -49,7 +49,7 @@ def getEnergiaJson():
     Returns:
         list: A list of dictionaries containing energia records.
     """
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
     
     alim_collect = mydb["energia"]
@@ -116,7 +116,7 @@ def update_bronze_layer():
         'energia': get_monthly_mean_with_date(prod_prices['energia'], ['producto', 'fuente', 'year', 'month'])
     }
 
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
 
     # Check and update data in MongoDB collections

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import pymongo
 from typing import Dict
+import streamlit as st
 
 DATABASE = "chainflation"
 
@@ -69,7 +70,7 @@ def calc_monthly_inflation(sector_df, cols, time_frame='year'):
 
 def update_monthly_inflation_per_product(include_source=False):
     # Read data from MongoDB collections
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
 
     vivienda_monthly = pd.json_normalize(list(mydb["vivienda_monthly"].find()))
@@ -198,7 +199,7 @@ def calcCategoriesInflation(inflations_product: pd.DataFrame, sector: str) -> pd
 
 def update_categories_inflations():
     # MongoDB configuration
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
 
     # Fetch data from MongoDB collection "yearly_inflation_prod"
@@ -277,7 +278,7 @@ def calcTotalInflation(inflations_categ: pd.DataFrame) -> pd.DataFrame:
 
 def update_total_inflations():
     # MongoDB configuration
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
 
     # Fetch data from MongoDB collection "yearly_inflation_prod"
@@ -318,7 +319,7 @@ def update_total_inflations():
 
 def getMonthlyProductPrices():
     # Read data from MongoDB collections
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
 
     vivienda_monthly = pd.json_normalize(list(mydb["vivienda_monthly"].find()))
@@ -354,7 +355,7 @@ def getProductInflation(include_source=False) -> Dict[str, pd.DataFrame]:
     """
 
     # Read data from MongoDB collections
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
     
     if include_source:
@@ -380,7 +381,7 @@ def getCategoriesInflation() -> Dict[str, pd.DataFrame]:
     """
     
     # Read data from MongoDB collections
-    myclient = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    myclient = pymongo.MongoClient(st.secrets["DB_SECRET"])
     mydb = myclient[DATABASE]
     
     collection = "YoY_inflation_category"

@@ -10,8 +10,7 @@ from datetime import datetime, time, date,  timedelta
 
 # Import for navbar
 from streamlit_option_menu import option_menu
-# from functions import *
-import gold_layer as gold_functions
+from functions import *
 
 
 ############ THIS DASHBOARD IS THE OLD VERSION. IT IS STILL HERE BECASUE THE FUNCTIONALITIES TO SHOW THE PRICES WITHOUT AGGREGATING IT BY MONTHS SHOULD BE KEPT, AND ALSO SHOWING MoM INFLATION   ################
@@ -20,23 +19,26 @@ st.title("Chainflation Data Sources")
 
 @st.cache_resource
 def get_mongo_client():
-    # mongo_client = pymongo.MongoClient(st.secrets["DB_SECRET"])
-    mongo_client = pymongo.MongoClient("mongodb+srv://cprietof:INcamachaja9@chainflation-east.eoueeme.mongodb.net/?retryWrites=true&w=majority")
+    mongo_client = pymongo.MongoClient(st.secrets["DB_SECRET"])
     return mongo_client
 
 @st.cache_data 
 def loadData():
-    # mongo_client = get_mongo_client() 
+    mongo_client = get_mongo_client() 
     # get product prices
-    prod_prices  = gold_functions.getMonthlyProductPrices()
+    prod_prices  = getProductPrices(mongo_client)
 
     # Get inflation per product
-    prod_infl = gold_functions.getProductInflation(include_source=False)
+    prod_infl = getProductInflation(prod_prices, 30) 
 
-    # Get total inflation and categories
-    category_infl = gold_functions.getCategoriesInflation()
+    # # Get inflation per category 
+    category_infl = getCategoriesInflation(prod_infl)
 
-    return prod_prices, prod_infl, category_infl
+
+    # # Get total inflation
+    total = getTotalInflation(category_infl)
+
+    return prod_prices, prod_infl, category_infl, total
 
 def plot_priceTime(prod_params):
 
@@ -103,7 +105,7 @@ with st.sidebar:
     )
 
 # Load data into the dataframe.
-prods_prices, prods_infl, categories_infl= loadData()
+prods_prices, prods_infl, categories_infl, total = loadData()
 
 if selected == "Sectores":
 
@@ -117,7 +119,8 @@ if selected == "Sectores":
         )
 
     prod_prices = prods_prices[param_cesta]
-    prod_infl = prods_infl[prods_infl['sector'] == param_cesta]
+    prod_infl = prods_infl[param_cesta]
+    category_infl = categories_infl[param_cesta]
 
     sources_names = prod_prices['fuente'].unique()
     product_names = prod_prices['producto'].unique()
@@ -161,14 +164,14 @@ if selected == "Inflación":
 
     fig = go.Figure()
 
-    for category in categories_infl['category'].unique():
-        category_data = categories_infl[categories_infl['category'] == category]
+    for category in total['category'].unique():
+        category_data = total[total['category'] == category]
         fig.add_trace(go.Scatter(x=category_data['fecha'], y=category_data['inflation'], 
                                 mode='lines+markers', name=category))
 
     fig.update_layout(
         title=f"Inflación por productos",
         xaxis_title="Fecha",
-        yaxis_title="IPC",
+        yaxis_title="Precio",
     )
     st.plotly_chart(fig, use_container_width=True)
