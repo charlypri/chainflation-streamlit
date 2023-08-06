@@ -165,7 +165,7 @@ if selected == "Inflación":
                                 mode='lines+markers', name=category))
 
     fig.update_layout(
-        title=f"Inflación por productos",
+        title=f"Inflación por Sectores",
         xaxis_title="Fecha",
         yaxis_title="IPC",
     )
