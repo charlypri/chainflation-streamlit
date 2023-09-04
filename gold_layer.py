@@ -264,7 +264,7 @@ def calcTotalInflation(inflations_categ: pd.DataFrame) -> pd.DataFrame:
     
     total_inflations = []
     for date in inflations_categ.fecha.unique():
-        daily_inflations = inflations_categ[inflations_categ['fecha'] == date]['inflation'].values
+        daily_inflations = inflations_categ[(inflations_categ['fecha'] == date) & (inflations_categ['category'] != 'total')]['inflation'].values
 
         inflationCategory_pct = []
         for num1, num2 in zip(daily_inflations, pesos):
