@@ -98,7 +98,7 @@ def update_monthly_inflation_per_product(include_source=False):
 
     # Concatenate DataFrames and add 'product' field
     all_data = pd.concat([monthly_inflation_prod_source[sector].assign(sector=sector) for sector in monthly_inflation_prod_source.keys()])
-
+    all_data.sort_values(by='fecha', inplace = True, ascending=False)
     data_columns = all_data.columns.tolist()
     
     # Get the latest date from the existing records in MongoDB
@@ -215,6 +215,7 @@ def update_categories_inflations():
     for sector, data in grouped_data:
         # Check if it is the first run or subsequent run
         sector_inflation = calcCategoriesInflation(data, sector)
+        sector_inflation.sort_values(by='fecha', inplace = True, ascending=False)
         data_columns = sector_inflation.columns.tolist()
         
         if latest_record:
@@ -292,7 +293,8 @@ def update_total_inflations():
     # Check if it is the first run or subsequent run
     total_inflation = calcTotalInflation(yearly_inflation_categories)
     data_columns = total_inflation.columns.tolist()
-    
+    total_inflation.sort_values(by='fecha', inplace = True, ascending=False)
+
     if latest_record:
         last_month = latest_record['fecha'].replace(day=1)
         last_month_data = total_inflation[total_inflation['fecha'] >= last_month]

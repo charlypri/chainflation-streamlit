@@ -123,6 +123,7 @@ def update_bronze_layer():
     for product, data in monthly_prices.items():
         collection = mydb[f"{product}_monthly"]
         data_columns = data.columns.tolist()
+        data.sort_values(by='fecha', inplace = True, ascending=False)
         
         # Get the latest date from the existing records in MongoDB
         latest_record = collection.find_one({}, sort=[('fecha', pymongo.DESCENDING)])
