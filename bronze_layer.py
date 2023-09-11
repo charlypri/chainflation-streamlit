@@ -72,7 +72,7 @@ def getProductPrices() -> Dict[str, pd.DataFrame]:
 
     prod_prices['energia'] = pd.json_normalize(getEnergiaJson())
     prices_vivienda = pd.json_normalize(getViviendaJson())
-    prod_prices['vivienda'] = prices_vivienda.loc[~((prices_vivienda['fuente'] == 'idealista') & (prices_vivienda['provincia'] == 'Madrid'))].copy()
+    prod_prices['vivienda'] = prices_vivienda[ (prices_vivienda['fuente'] == 'idealista') & (prices_vivienda['provincia'] == 'España')].copy()
     prod_prices['alimentacion'] = pd.json_normalize(getAlimentacionJson())
     prod_prices['alimentacion']["precio"] = prod_prices['alimentacion']["precio_referencia"] 
 
