@@ -183,7 +183,7 @@ def getProductPrices(mongo_client):
 
     prod_prices['energia'] = pd.json_normalize(getEnergiaJson(mongo_client))
     prices_vivienda = pd.json_normalize(getViviendaJson(mongo_client))
-    prod_prices['vivienda'] = prices_vivienda.loc[~((prices_vivienda['fuente'] == 'idealista') & (prices_vivienda['provincia'] == 'Madrid'))].copy()
+    prod_prices['vivienda'] = prices_vivienda[prices_vivienda["provincia"] =="España"].copy()
     prod_prices['alimentacion'] = pd.json_normalize(getAlimentacionJson(mongo_client))
     prod_prices['alimentacion']["precio"] = prod_prices['alimentacion']["precio_referencia"] 
 
@@ -242,7 +242,7 @@ def normalize_luz(energy_prices):
     return energy_prices
 
 def preprocess_vivienda(vivienda_prices):
-    vivienda_prices = vivienda_prices[(vivienda_prices["provincia"] == 'España') & (vivienda_prices["fuente"] == 'realAdvisor')]
+    vivienda_prices = vivienda_prices[(vivienda_prices["provincia"] == 'España') & (vivienda_prices["fuente"] == 'idealista')]
     return vivienda_prices
 
 # # get product prices

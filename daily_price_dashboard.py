@@ -29,14 +29,14 @@ def loadData():
     prod_prices  = getProductPrices(mongo_client)
 
     # Get inflation per product
-    prod_infl = getProductInflation(prod_prices, 30) 
+    prod_infl = getProductInflation(prod_prices.copy(), 30) 
 
     # # Get inflation per category 
-    category_infl = getCategoriesInflation(prod_infl)
+    category_infl = getCategoriesInflation(prod_infl.copy())
 
 
     # # Get total inflation
-    total = getTotalInflation(category_infl)
+    total = getTotalInflation(category_infl.copy())
 
     return prod_prices, prod_infl, category_infl, total
 
@@ -125,7 +125,7 @@ if selected == "Sectores":
     sources_names = prod_prices['fuente'].unique()
     product_names = prod_prices['producto'].unique()
     
-
+    st.dataframe(prod_prices)
     with col2:
         param_prod = st.selectbox(
             "Selecciona la fuente", 

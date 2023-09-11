@@ -5,3 +5,4 @@ __pycache__/
 myenv/
 *.ipynb
 .env
+secrets.toml
