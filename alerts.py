@@ -9,6 +9,7 @@ import plotly.express as px
 import requests
 from streamlit_option_menu import option_menu
 import plotly.graph_objects as go
+from datetime import datetime, time, date
 
 load_dotenv()
 
@@ -46,82 +47,118 @@ vivienda_df["producto"] = vivienda_df["producto"].str.capitalize()
 
 if menu == "General":
     # Parámetros
-    st.header("Inflación en España", divider="blue")
+    st.title("Inflación en España - Chainflation")
+    st.divider()
 
-    # Crear columnas para los máximos
-    st.subheader("Máximos")
-    col1, col2, col3, col4 = st.columns(4)
-
-    # Obtener categorías y asegurar que "Total" esté primero
-    categories = category_infl["category"].unique()
-    sorted_categories = sorted(categories, key=lambda x: (x != "total", x))
-
-    # Calcular y mostrar máximos por categoría
-    for i, category in enumerate(sorted_categories):
-        category_data = category_infl[category_infl["category"] == category]
-
-        # Mes con la inflación más alta
-        max_inflation_row = category_data.loc[category_data["inflation"].idxmax()]
-        max_month = max_inflation_row["fecha"].strftime("%B %Y")
-        max_value = max_inflation_row["inflation"]
-
-        with [col1, col2, col3, col4][i % 4]:  # Distribuir en 4 columnas
-            with st.container(border=True):
-                st.metric(
-                    label=f"{category.capitalize()}",
-                    value=max_month,
-                    delta=f"{max_value:.2f}%",
-                )
-
-    # Crear columnas para los mínimos
-    st.subheader("Mínimos")
-    col1, col2, col3, col4 = st.columns(4)
-
-    # Calcular y mostrar mínimos por categoría
-    for i, category in enumerate(sorted_categories):
-        category_data = category_infl[category_infl["category"] == category]
-
-        # Mes con la inflación más baja
-        min_inflation_row = category_data.loc[category_data["inflation"].idxmin()]
-        min_month = min_inflation_row["fecha"].strftime("%B %Y")
-        min_value = min_inflation_row["inflation"]
-
-        with [col1, col2, col3, col4][i % 4]:  # Distribuir en 4 columnas
-            with st.container(border=True):
-                st.metric(
-                    label=f"{category.capitalize()}",
-                    value=min_month,
-                    delta=f"{min_value:.2f}%",
-                )
+    time_periods = {
+        "3 month": date.today() - timedelta(days=91),
+        "6 Months": date.today() - timedelta(days=180),
+        "1 year": date.today() - timedelta(days=365),
+        "5 years": date.today() - timedelta(days=720),
+    }
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        date_range = st.selectbox(label="Period", options=time_periods.keys(), index=2)
     with st.container(border=True):
 
-        # Gráfico de inflación por categoría
-        st.subheader("Histórico de inflación")
         fig = go.Figure()
-
         for category in category_infl["category"].unique():
             category_data = category_infl[
                 category_infl["category"] == category
             ].sort_values("fecha")
+
+            category_data = category_data[
+                category_data["fecha"].dt.date > time_periods[date_range]
+            ]
+
             fig.add_trace(
                 go.Scatter(
                     x=category_data["fecha"],
                     y=category_data["inflation"],
                     mode="lines+markers",
-                    name=category,
+                    name=category.capitalize(),
                 )
             )
 
         fig.update_layout(
-            title="Inflación por productos",
             xaxis_title="Fecha",
             yaxis_title="Inflación (%)",
+            height=600,
+            title="Inflación YoY de Chainflation",
+            legend=dict(
+                font=dict(
+                    size=30,
+                )
+            ),
+            xaxis=dict(
+                title="Fecha",
+                titlefont=dict(size=30),  # Tamaño del título del eje X
+                tickfont=dict(size=25),  # Tamaño de las etiquetas del eje X
+            ),
+            yaxis=dict(
+                title="Inflación (%)",
+                titlefont=dict(size=30),  # Tamaño del título del eje Y
+                tickfont=dict(size=25),  # Tamaño de las etiquetas del eje Y
+            ),
         )
         st.plotly_chart(fig)
+
+    # Crear columnas para los máximos
+
+    # Obtener categorías y asegurar que "Total" esté primero
+    categories = category_infl["category"].unique()
+    sorted_categories = sorted(categories, key=lambda x: (x != "total", x))
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col2:
+        st.subheader("Máximos registrados")
+        with st.container(border=True):
+            # Calcular y mostrar máximos por categoría
+            for i, category in enumerate(sorted_categories):
+                category_data = category_infl[category_infl["category"] == category]
+
+                # Mes con la inflación más alta
+                max_inflation_row = category_data.loc[
+                    category_data["inflation"].idxmax()
+                ]
+                max_month = max_inflation_row["fecha"].strftime("%B %Y")
+                max_value = max_inflation_row["inflation"]
+
+                # with [col1, col2, col3, col4][i % 4]:  # Distribuir en 4 columnas
+                with st.container(border=True):
+                    st.metric(
+                        label=f"{category.capitalize()}",
+                        value=max_month,
+                        delta=f"{max_value:.2f}%",
+                        delta_color="inverse",
+                    )
+
+    with col3:
+        st.subheader("Mínimos registrados")
+        with st.container(border=True):
+            # Calcular y mostrar mínimos por categoría
+            for i, category in enumerate(sorted_categories):
+                category_data = category_infl[category_infl["category"] == category]
+
+                # Mes con la inflación más baja
+                min_inflation_row = category_data.loc[
+                    category_data["inflation"].idxmin()
+                ]
+                min_month = min_inflation_row["fecha"].strftime("%B %Y")
+                min_value = min_inflation_row["inflation"]
+                with st.container(border=True):
+                    st.metric(
+                        label=f"{category.capitalize()}",
+                        value=min_month,
+                        delta=f"{min_value:.2f}%",
+                        delta_color="inverse",
+                    )
+
 
 if menu == "Precios de Alimentos":
     # Análisis de precios de alimentos
     st.title("📊 Análisis de Precios de Alimentos")
+    st.divider()
 
     # Columna para los filtros principales
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -180,49 +217,63 @@ if menu == "Precios de Alimentos":
         precios_promedio.groupby("producto")["precio_referencia"].idxmin()
     ]
 
-    # Visualización de las métricas y explicaciones
-    st.header(f"Supermercado: {supermercado_seleccionado}")
+    col1, col2 = st.columns([2, 4])
+    with col1:
+        with st.container(border=True):
+            # Visualización de las métricas y explicaciones
+            st.header(f"Supermercado: {supermercado_seleccionado}")
+            st.markdown("")
 
     # Métricas con tarjetas (Cards) explicadas
-    st.markdown("### 🏷️ Productos clave para el supermercado seleccionado")
+    st.markdown("")
+    st.markdown("")
+    st.subheader(" 🏷️ Productos clave para el supermercado seleccionado", divider="blue")
+    st.caption(
+        "Estas métricas muestran información sobre los productos más caros, baratos y aquellos que han cambiado más de precio en el supermercado seleccionado."
+    )
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric(
-            label="Producto más caro",
-            value=f"{producto_mas_caro['producto']}",
-            delta=f"{producto_mas_caro['precio_referencia']:.2f}€",
-            help=f"Este es el producto más caro en {supermercado_seleccionado} durante el periodo seleccionado.",
-        )
+        with st.container(border=True):
+            st.metric(
+                label="Producto más caro",
+                value=f"{producto_mas_caro['producto']}",
+                delta=f"{producto_mas_caro['precio_referencia']:.2f}€",
+                help=f"Este es el producto más caro en {supermercado_seleccionado} durante el periodo seleccionado.",
+            )
 
     with col2:
-        st.metric(
-            label="Producto más barato",
-            value=f"{producto_mas_barato['producto']}",
-            delta=f"{producto_mas_barato['precio_referencia']:.2f}€",
-            help=f"Este es el producto más barato en {supermercado_seleccionado} en el mismo periodo.",
-        )
+        with st.container(border=True):
+            st.metric(
+                label="Producto más barato",
+                value=f"{producto_mas_barato['producto']}",
+                delta=f"{producto_mas_barato['precio_referencia']:.2f}€",
+                help=f"Este es el producto más barato en {supermercado_seleccionado} en el mismo periodo.",
+            )
 
     with col3:
-        st.metric(
-            label="Mayor aumento de precio",
-            value=f"{producto_mayor_aumento['producto']}",
-            delta=f"{producto_mayor_aumento['diferencia']:.2f}€",
-            help="Este producto ha tenido el mayor aumento en su precio durante el periodo seleccionado.",
-        )
+        with st.container(border=True):
+            st.metric(
+                label="Mayor aumento de precio",
+                value=f"{producto_mayor_aumento['producto']}",
+                delta=f"{producto_mayor_aumento['diferencia']:.2f}€",
+                help="Este producto ha tenido el mayor aumento en su precio durante el periodo seleccionado.",
+            )
     with col4:
-        st.metric(
-            label="Mayor disminución de precio",
-            value=f"{producto_mayor_disminucion['producto']}",
-            delta=f"{producto_mayor_disminucion['diferencia']:.2f}€",
-            help="Este producto ha tenido el mayor disminución en su precio durante el periodo seleccionado.",
-        )
-    st.markdown(
-        "Las métricas anteriores muestran información sobre los productos más caros, baratos y aquellos que han cambiado más de precio en el supermercado seleccionado."
-    )
+        with st.container(border=True):
+            st.metric(
+                label="Mayor disminución de precio",
+                value=f"{producto_mayor_disminucion['producto']}",
+                delta=f"{producto_mayor_disminucion['diferencia']:.2f}€",
+                help="Este producto ha tenido el mayor disminución en su precio durante el periodo seleccionado.",
+            )
 
     # Gráfico interactivo con Plotly: evolución de precios en el tiempo
-    st.markdown("### 📈 Evolución de precios de productos en el supermercado")
+    st.markdown("")
+    st.markdown("")
+    st.subheader(
+        "📈 Evolución de precios de productos en el supermercado", divider="blue"
+    )
     fig = px.line(
         df_filtrado,
         x="fecha",
@@ -234,7 +285,9 @@ if menu == "Precios de Alimentos":
     st.plotly_chart(fig, use_container_width=True)
 
     # Gráfico de barras para los 5 productos que más han subido y bajado
-    st.markdown("### 📊 Productos que más han subido y bajado en la última semana")
+    st.subheader(
+        " 📊 Productos que más han subido y bajado en la última semana", divider="blue"
+    )
     fig_variacion = px.bar(
         top_variacion,
         x="producto",
@@ -249,9 +302,11 @@ if menu == "Precios de Alimentos":
     )
     st.plotly_chart(fig_variacion, use_container_width=True)
 
+    st.markdown("")
     # Comparación de productos más baratos entre supermercados
-    st.markdown("### 🛒 Comparación de productos más baratos entre supermercados")
-
+    st.subheader(
+        " 🛒 Comparación de productos más baratos entre supermercados", divider="blue"
+    )
     # Graficar comparativa de precios más baratos entre supermercados
     fig_bar = px.bar(
         productos_mas_baratos,
@@ -282,15 +337,19 @@ if menu == "Precios de Alimentos":
 elif menu == "Precios de Vivienda":
     # Filtro de Venta o Alquiler
     st.title("🏡 Análisis de Precios de Vivienda por Provincias")
-    producto_tipo = st.radio("Selecciona si es venta o alquiler", ["Venta", "Alquiler"])
+    st.divider()
 
     # Filtro de fechas
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns([1, 2, 2])
     with col1:
+        producto_tipo = st.radio(
+            "Selecciona si es venta o alquiler", ["Venta", "Alquiler"]
+        )
+    with col2:
         fecha_inicio_vivienda = st.date_input(
             "Fecha de inicio", pd.to_datetime("2024-01-01")
         )
-    with col2:
+    with col3:
         fecha_fin_vivienda = st.date_input("Fecha de fin", pd.to_datetime("2024-12-31"))
 
         # Filtrar los datos por tipo de producto (venta o alquiler) y rango de fechas
@@ -336,45 +395,49 @@ elif menu == "Precios de Vivienda":
     top_variacion_provincias = pd.concat(
         [top_aumento_provincias, top_disminucion_provincias]
     )
-
+    st.markdown("")
     # Visualización de las métricas y explicaciones
     st.header(f"Análisis para: {producto_tipo}")
-
+    st.markdown("")
     # Métricas con tarjetas (Cards) explicadas
-    st.markdown("### 🏷️ Provincias clave")
+    st.subheader("🏷️ Provincias clave", divider="blue")
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric(
-            label="Provincia más cara",
-            value=f"{provincia_mas_cara['provincia']}",
-            delta=f"{provincia_mas_cara['precio']:.2f}€",
-            help=f"Esta es la provincia más cara para {producto_tipo} en el periodo seleccionado.",
-        )
+        with st.container(border=True):
+            st.metric(
+                label="Provincia más cara",
+                value=f"{provincia_mas_cara['provincia']}",
+                delta=f"{provincia_mas_cara['precio']:.2f}€",
+                help=f"Esta es la provincia más cara para {producto_tipo} en el periodo seleccionado.",
+            )
 
     with col2:
-        st.metric(
-            label="Provincia más barata",
-            value=f"{provincia_mas_barata['provincia']}",
-            delta=f"{provincia_mas_barata['precio']:.2f}€",
-            help=f"Esta es la provincia más barata para {producto_tipo} en el mismo periodo.",
-        )
+        with st.container(border=True):
+            st.metric(
+                label="Provincia más barata",
+                value=f"{provincia_mas_barata['provincia']}",
+                delta=f"{provincia_mas_barata['precio']:.2f}€",
+                help=f"Esta es la provincia más barata para {producto_tipo} en el mismo periodo.",
+            )
 
     with col3:
-        st.metric(
-            label="Mayor aumento de precio",
-            value=f"{provincia_mayor_aumento['provincia']}",
-            delta=f"{provincia_mayor_aumento['diferencia']:.2f}€",
-            help="Esta provincia ha tenido el mayor aumento de precios.",
-        )
+        with st.container(border=True):
+            st.metric(
+                label="Mayor aumento de precio",
+                value=f"{provincia_mayor_aumento['provincia']}",
+                delta=f"{provincia_mayor_aumento['diferencia']:.2f}€",
+                help="Esta provincia ha tenido el mayor aumento de precios.",
+            )
 
     with col4:
-        st.metric(
-            label="Mayor disminución de precio",
-            value=f"{provincia_mayor_disminucion['provincia']}",
-            delta=f"{provincia_mayor_disminucion['diferencia']:.2f}€",
-            help="Esta provincia ha tenido el mayor diminución de precios.",
-        )
+        with st.container(border=True):
+            st.metric(
+                label="Mayor disminución de precio",
+                value=f"{provincia_mayor_disminucion['provincia']}",
+                delta=f"{provincia_mayor_disminucion['diferencia']:.2f}€",
+                help="Esta provincia ha tenido el mayor diminución de precios.",
+            )
 
     # Filtrar los datos por tipo de producto (venta o alquiler) y rango de fechas
     df_vivienda_filtrado = vivienda_df[
@@ -397,7 +460,7 @@ elif menu == "Precios de Vivienda":
     col1, col2 = st.columns(2)
     with col1:
         # Crear mapa coroplético con Folium
-        st.markdown("### 🌍 Precios por Provincias en Mapa Coroplético")
+        st.subheader("🌍 Precios por Provincias en Mapa Coroplético")
 
         # Crear el mapa base centrado en España
         mapa = folium.Map(
@@ -420,7 +483,7 @@ elif menu == "Precios de Vivienda":
 
     # Gráfico de barras con precios por provincia
     with col2:
-        st.markdown("### 📊 Provincias ordenadas por precio promedio")
+        st.subheader(" 📊 Provincias ordenadas por precio promedio")
         fig_bar_provincias = px.bar(
             precios_promedio_provincia.sort_values("precio", ascending=False),
             x="provincia",
@@ -431,20 +494,20 @@ elif menu == "Precios de Vivienda":
             color_continuous_scale=px.colors.sequential.Blues,
         )
         fig_bar_provincias.update_layout(
-            yaxis_title="Precio promedio (€)", xaxis_title="Provincia"
+            yaxis_title="Precio promedio (€)", xaxis_title="Provincia", height=650
         )
         st.plotly_chart(fig_bar_provincias, use_container_width=True)
 
         # Gráfico de barras para las provincias con mayor variación
-    st.markdown(
-        "### 📊 Provincias que más han subido y bajado en precio en el último mes"
+    st.subheader(
+        "📊 Provincias que más han subido y bajado en precio en el último mes",
+        divider="blue",
     )
     fig_variacion_provincias = px.bar(
         top_variacion_provincias,
         x="provincia",
         y="variacion",
         color="variacion",
-        title="Top 5 provincias que más han subido y bajado en precio en el último mes",
         labels={"variacion": "Cambio porcentual (%)", "provincia": "Provincia"},
         color_continuous_scale=["red", "green"],
     )
