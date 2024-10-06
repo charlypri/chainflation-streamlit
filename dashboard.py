@@ -18,141 +18,314 @@ st.set_page_config(page_title="Chainflation - Dashboard", page_icon="📊", layo
 
 
 @st.cache_resource(hash_funcs={"pymongo.mongo_client.MongoClient": id})
-def loadData():
-    # get product prices
-    prod_prices = getProductPrices()
+def load_data():
+    """
+    Carga los datos de precios de productos y categorías de inflación desde MongoDB.
 
+    Returns:
+        prod_prices (dict): Diccionario que contiene los precios de los productos (alimentación, vivienda, energía).
+        category_infl (DataFrame): DataFrame que contiene la inflación por categorías.
+    """
+    prod_prices = getProductPrices()
     category_infl = getCategoriesInflation()
     return prod_prices, category_infl
 
 
-with st.sidebar:
-    menu = option_menu(
-        "Explora los Datos",
-        ["General", "Precios de Alimentos", "Precios de Vivienda"],
-        icons=["", "gear", "bi-joystick"],
-        menu_icon="",
-        default_index=0,
-    )
+def display_sidebar_menu():
+    """
+    Muestra el menú lateral de la aplicación.
 
-prod_prices, category_infl = loadData()
-alimentacion_df = prod_prices["alimentacion"]
-vivienda_df = prod_prices["vivienda"]
-energia_df = prod_prices["energia"]
+    Returns:
+        menu (str): Opción seleccionada del menú.
+    """
+    with st.sidebar:
+        menu = option_menu(
+            "Explora los Datos",
+            ["General", "Precios de Alimentos", "Precios de Vivienda"],
+            icons=["", "gear", "bi-joystick"],
+            menu_icon="",
+            default_index=0,
+        )
+    return menu
 
-alimentacion_df["producto"] = alimentacion_df["producto"].str.capitalize()
 
-vivienda_df = vivienda_df[vivienda_df["provincia"] != "España"]
-vivienda_df["producto"] = vivienda_df["producto"].str.capitalize()
+def filter_vivienda_data(vivienda_df, producto_tipo, fecha_inicio, fecha_fin):
+    """
+    Filtra los datos de precios de vivienda por tipo de producto (venta o alquiler) y fechas.
 
-if menu == "General":
-    # Parámetros
-    st.title("Inflación en España - Chainflation")
-    st.divider()
+    Args:
+        vivienda_df (DataFrame): DataFrame con los datos de precios de vivienda.
+        producto_tipo (str): Tipo de producto, puede ser 'Venta' o 'Alquiler'.
+        fecha_inicio (datetime): Fecha de inicio del rango.
+        fecha_fin (datetime): Fecha de fin del rango.
 
+    Returns:
+        DataFrame: Datos filtrados por tipo de producto y fechas.
+    """
+    return vivienda_df[
+        (vivienda_df["producto"] == producto_tipo)
+        & (vivienda_df["fecha"] >= pd.to_datetime(fecha_inicio))
+        & (vivienda_df["fecha"] <= pd.to_datetime(fecha_fin))
+    ]
+
+
+def filter_alimentacion_data(alimentacion_df, supermercado, fecha_inicio, fecha_fin):
+    """
+    Filtra los datos de precios de alimentación por supermercado y fechas.
+
+    Args:
+        alimentacion_df (DataFrame): DataFrame con los datos de precios de alimentación.
+        supermercado (str): Supermercado seleccionado.
+        fecha_inicio (datetime): Fecha de inicio del rango.
+        fecha_fin (datetime): Fecha de fin del rango.
+
+    Returns:
+        DataFrame: Datos filtrados por supermercado y fechas.
+    """
+    return alimentacion_df[
+        (alimentacion_df["fuente"] == supermercado)
+        & (alimentacion_df["fecha"] >= pd.to_datetime(fecha_inicio))
+        & (alimentacion_df["fecha"] <= pd.to_datetime(fecha_fin))
+    ]
+
+
+def plot_inflation_trend(category_infl, date_range):
+    """
+    Crea una gráfica de la tendencia de inflación por categorías en función del rango de fechas seleccionado.
+
+    Args:
+        category_infl (DataFrame): DataFrame con los datos de inflación por categorías.
+        date_range (str): Periodo de tiempo seleccionado por el usuario.
+
+    Returns:
+        fig (go.Figure): Figura de Plotly con la gráfica de la tendencia de inflación.
+    """
+    fig = go.Figure()
     time_periods = {
         "3 month": date.today() - timedelta(days=91),
         "6 Months": date.today() - timedelta(days=180),
         "1 year": date.today() - timedelta(days=365),
         "5 years": date.today() - timedelta(days=720),
     }
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        date_range = st.selectbox(label="Period", options=time_periods.keys(), index=2)
-    with st.container(border=True):
 
-        fig = go.Figure()
-        for category in category_infl["category"].unique():
-            category_data = category_infl[
-                category_infl["category"] == category
-            ].sort_values("fecha")
+    for category in category_infl["category"].unique():
+        category_data = category_infl[
+            category_infl["category"] == category
+        ].sort_values("fecha")
 
-            category_data = category_data[
-                category_data["fecha"].dt.date > time_periods[date_range]
-            ]
+        category_data = category_data[
+            category_data["fecha"].dt.date > time_periods[date_range]
+        ]
 
-            fig.add_trace(
-                go.Scatter(
-                    x=category_data["fecha"],
-                    y=category_data["inflation"],
-                    mode="lines+markers",
-                    name=category.capitalize(),
-                )
+        fig.add_trace(
+            go.Scatter(
+                x=category_data["fecha"],
+                y=category_data["inflation"],
+                mode="lines+markers",
+                name=category.capitalize(),
             )
-
-        fig.update_layout(
-            xaxis_title="Fecha",
-            yaxis_title="Inflación (%)",
-            height=600,
-            title="Inflación YoY de Chainflation",
-            legend=dict(
-                font=dict(
-                    size=30,
-                )
-            ),
-            xaxis=dict(
-                title="Fecha",
-                titlefont=dict(size=30),  # Tamaño del título del eje X
-                tickfont=dict(size=25),  # Tamaño de las etiquetas del eje X
-            ),
-            yaxis=dict(
-                title="Inflación (%)",
-                titlefont=dict(size=30),  # Tamaño del título del eje Y
-                tickfont=dict(size=25),  # Tamaño de las etiquetas del eje Y
-            ),
         )
-        st.plotly_chart(fig)
 
-    # Crear columnas para los máximos
+    fig.update_layout(
+        xaxis_title="Fecha",
+        yaxis_title="Inflación (%)",
+        height=600,
+        title="Inflación YoY de Chainflation",
+        legend=dict(
+            font=dict(
+                size=30,
+            )
+        ),
+        xaxis=dict(
+            title="Fecha",
+            titlefont=dict(size=30),
+            tickfont=dict(size=25),
+        ),
+        yaxis=dict(
+            title="Inflación (%)",
+            titlefont=dict(size=30),
+            tickfont=dict(size=25),
+        ),
+    )
+    return fig
 
-    # Obtener categorías y asegurar que "Total" esté primero
+
+def display_metrics(category_infl, metric_type):
+    """
+    Muestra las métricas de inflación máximas o mínimas por categoría.
+
+    Args:
+        category_infl (DataFrame): DataFrame con los datos de inflación por categorías.
+        metric_type (str): Tipo de métrica a mostrar, puede ser 'max' o 'min'.
+    """
     categories = category_infl["category"].unique()
     sorted_categories = sorted(categories, key=lambda x: (x != "total", x))
 
-    col1, col2, col3, col4 = st.columns(4)
-    with col2:
+    for category in sorted_categories:
+        category_data = category_infl[category_infl["category"] == category]
+
+        if metric_type == "max":
+            metric_row = category_data.loc[category_data["inflation"].idxmax()]
+        else:
+            metric_row = category_data.loc[category_data["inflation"].idxmin()]
+
+        month = metric_row["fecha"].strftime("%B %Y")
+        value = metric_row["inflation"]
+        with st.container(border=True):
+            st.metric(
+                label=f"{category.capitalize()}",
+                value=month,
+                delta=f"{value:.2f}%",
+                delta_color="inverse" if metric_type == "max" else "normal",
+            )
+
+
+def obtener_provincia_mas_cara_y_mas_barata(df_vivienda_filtrado):
+    """
+    Retorna la provincia más cara y más barata según el precio.
+    """
+    provincia_mas_cara = df_vivienda_filtrado.loc[
+        df_vivienda_filtrado["precio"].idxmax()
+    ]
+    provincia_mas_barata = df_vivienda_filtrado.loc[
+        df_vivienda_filtrado["precio"].idxmin()
+    ]
+    return provincia_mas_cara, provincia_mas_barata
+
+
+def obtener_provincia_mayor_aumento_y_disminucion(df_vivienda_filtrado):
+    """
+    Retorna la provincia que más ha aumentado y más ha disminuido en valor.
+    """
+    df_vivienda_filtrado["diferencia"] = (
+        df_vivienda_filtrado.groupby("provincia")["precio"].diff().fillna(0)
+    )
+    provincia_mayor_aumento = df_vivienda_filtrado.loc[
+        df_vivienda_filtrado["diferencia"].idxmax()
+    ]
+    provincia_mayor_disminucion = df_vivienda_filtrado.loc[
+        df_vivienda_filtrado["diferencia"].idxmin()
+    ]
+    return provincia_mayor_aumento, provincia_mayor_disminucion
+
+
+def obtener_provincias_con_mas_variacion_en_ultimos_30_dias(df_vivienda_filtrado):
+    """
+    Retorna las 5 provincias con mayor y menor variación en los últimos 30 días.
+    """
+    ultimo_mes_vivienda = df_vivienda_filtrado[
+        df_vivienda_filtrado["fecha"]
+        >= (df_vivienda_filtrado["fecha"].max() - pd.Timedelta(days=30))
+    ]
+    ultimo_mes_vivienda["variacion"] = (
+        ultimo_mes_vivienda.groupby("provincia")["precio"].pct_change().fillna(0)
+    )
+
+    top_aumento_provincias = ultimo_mes_vivienda.nlargest(5, "variacion")
+    top_disminucion_provincias = ultimo_mes_vivienda.nsmallest(5, "variacion")
+
+    # Concatenar para un gráfico comparativo
+    top_variacion_provincias = pd.concat(
+        [top_aumento_provincias, top_disminucion_provincias]
+    )
+
+    return top_variacion_provincias
+
+
+def obtener_producto_mas_caro_y_mas_barato(df_filtrado):
+    """
+    Retorna el producto más caro y el más barato según el precio de referencia.
+    """
+    producto_mas_caro = df_filtrado.loc[df_filtrado["precio_referencia"].idxmax()]
+    producto_mas_barato = df_filtrado.loc[df_filtrado["precio_referencia"].idxmin()]
+    return producto_mas_caro, producto_mas_barato
+
+
+def obtener_producto_mayor_aumento_y_disminucion(df_filtrado):
+    """
+    Retorna el producto que más ha aumentado y más ha disminuido en valor.
+    """
+    df_filtrado["diferencia"] = (
+        df_filtrado.groupby("producto")["precio_referencia"].diff().fillna(0)
+    )
+    producto_mayor_aumento = df_filtrado.loc[df_filtrado["diferencia"].idxmax()]
+    producto_mayor_disminucion = df_filtrado.loc[df_filtrado["diferencia"].idxmin()]
+    return producto_mayor_aumento, producto_mayor_disminucion
+
+
+def obtener_productos_con_mas_variacion_ultima_semana(df_filtrado):
+    """
+    Retorna los 5 productos con mayor aumento y los 5 con mayor disminución en la última semana.
+    """
+    ultima_semana = df_filtrado[
+        df_filtrado["fecha"] >= (df_filtrado["fecha"].max() - pd.Timedelta(days=14))
+    ]
+    ultima_semana["variacion"] = (
+        ultima_semana.groupby("producto")["precio_referencia"]
+        .pct_change(periods=14)
+        .fillna(0)
+    )
+
+    top_aumento = ultima_semana.nlargest(5, "variacion")
+    top_disminucion = ultima_semana.nsmallest(5, "variacion")
+
+    # Concatenar para un gráfico comparativo
+    top_variacion = pd.concat([top_aumento, top_disminucion])
+
+    return top_variacion
+
+
+def comparar_precios_entre_supermercados(alimentacion_df):
+    """
+    Retorna los productos más baratos en promedio por supermercado.
+    """
+    precios_promedio = (
+        alimentacion_df.groupby(["fuente", "producto"])["precio_referencia"]
+        .mean()
+        .reset_index()
+    )
+    productos_mas_baratos = precios_promedio.loc[
+        precios_promedio.groupby("producto")["precio_referencia"].idxmin()
+    ]
+    return productos_mas_baratos
+
+
+# Cargar los datos
+prod_prices, category_infl = load_data()
+alimentacion_df = prod_prices["alimentacion"]
+vivienda_df = prod_prices["vivienda"]
+energia_df = prod_prices["energia"]
+
+alimentacion_df["producto"] = alimentacion_df["producto"].str.capitalize()
+vivienda_df = vivienda_df[vivienda_df["provincia"] != "España"]
+vivienda_df["producto"] = vivienda_df["producto"].str.capitalize()
+
+# Mostrar el menú lateral
+menu = display_sidebar_menu()
+
+# Mostrar análisis general
+if menu == "General":
+    st.title("Inflación en España - Chainflation")
+    st.divider()
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        date_range = st.selectbox(
+            label="Period",
+            options=["3 month", "6 Months", "1 year", "5 years"],
+            index=2,
+        )
+    with st.container(border=True):
+        fig = plot_inflation_trend(category_infl, date_range)
+        st.plotly_chart(fig)
+
+    col1, col2 = st.columns(2)
+    with col1:
         st.subheader("Máximos registrados")
-        with st.container(border=True):
-            # Calcular y mostrar máximos por categoría
-            for i, category in enumerate(sorted_categories):
-                category_data = category_infl[category_infl["category"] == category]
-
-                # Mes con la inflación más alta
-                max_inflation_row = category_data.loc[
-                    category_data["inflation"].idxmax()
-                ]
-                max_month = max_inflation_row["fecha"].strftime("%B %Y")
-                max_value = max_inflation_row["inflation"]
-
-                # with [col1, col2, col3, col4][i % 4]:  # Distribuir en 4 columnas
-                with st.container(border=True):
-                    st.metric(
-                        label=f"{category.capitalize()}",
-                        value=max_month,
-                        delta=f"{max_value:.2f}%",
-                        delta_color="inverse",
-                    )
-
-    with col3:
+        display_metrics(category_infl, "max")
+    with col2:
         st.subheader("Mínimos registrados")
-        with st.container(border=True):
-            # Calcular y mostrar mínimos por categoría
-            for i, category in enumerate(sorted_categories):
-                category_data = category_infl[category_infl["category"] == category]
-
-                # Mes con la inflación más baja
-                min_inflation_row = category_data.loc[
-                    category_data["inflation"].idxmin()
-                ]
-                min_month = min_inflation_row["fecha"].strftime("%B %Y")
-                min_value = min_inflation_row["inflation"]
-                with st.container(border=True):
-                    st.metric(
-                        label=f"{category.capitalize()}",
-                        value=min_month,
-                        delta=f"{min_value:.2f}%",
-                        delta_color="inverse",
-                    )
+        display_metrics(category_infl, "min")
 
 
 if menu == "Precios de Alimentos":
@@ -173,49 +346,21 @@ if menu == "Precios de Alimentos":
         fecha_fin = st.date_input("Fecha de fin", pd.to_datetime("2024-12-31"))
 
     # Filtrar los datos por supermercado y por rango de fechas
-    df_filtrado = alimentacion_df[
-        (alimentacion_df["fuente"] == supermercado_seleccionado)
-        & (alimentacion_df["fecha"] >= pd.to_datetime(fecha_inicio))
-        & (alimentacion_df["fecha"] <= pd.to_datetime(fecha_fin))
-    ]
-
-    # 1. Producto más caro y más barato
-    producto_mas_caro = df_filtrado.loc[df_filtrado["precio_referencia"].idxmax()]
-    producto_mas_barato = df_filtrado.loc[df_filtrado["precio_referencia"].idxmin()]
-
-    # 2. Producto que más ha aumentado y disminuido en valor
-    df_filtrado["diferencia"] = (
-        df_filtrado.groupby("producto")["precio_referencia"].diff().fillna(0)
-    )
-    producto_mayor_aumento = df_filtrado.loc[df_filtrado["diferencia"].idxmax()]
-    producto_mayor_disminucion = df_filtrado.loc[df_filtrado["diferencia"].idxmin()]
-
-    # 3. Productos que más han subido y bajado en la última semana
-    ultima_semana = df_filtrado[
-        df_filtrado["fecha"] >= (df_filtrado["fecha"].max() - pd.Timedelta(days=14))
-    ]
-    ultima_semana["variacion"] = (
-        ultima_semana.groupby("producto")["precio_referencia"]
-        .pct_change(periods=14)
-        .fillna(0)
+    df_filtrado = filter_alimentacion_data(
+        alimentacion_df=alimentacion_df,
+        supermercado=supermercado_seleccionado,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
     )
 
-    # Seleccionar los 5 que más subieron y los 5 que más bajaron
-    top_aumento = ultima_semana.nlargest(5, "variacion")
-    top_disminucion = ultima_semana.nsmallest(5, "variacion")
-
-    # Concatenar para un gráfico comparativo
-    top_variacion = pd.concat([top_aumento, top_disminucion])
-
-    # 4. Comparación de precios entre supermercados
-    precios_promedio = (
-        alimentacion_df.groupby(["fuente", "producto"])["precio_referencia"]
-        .mean()
-        .reset_index()
+    producto_mas_caro, producto_mas_barato = obtener_producto_mas_caro_y_mas_barato(
+        df_filtrado
     )
-    productos_mas_baratos = precios_promedio.loc[
-        precios_promedio.groupby("producto")["precio_referencia"].idxmin()
-    ]
+    producto_mayor_aumento, producto_mayor_disminucion = (
+        obtener_producto_mayor_aumento_y_disminucion(df_filtrado)
+    )
+    top_variacion = obtener_productos_con_mas_variacion_ultima_semana(df_filtrado)
+    productos_mas_baratos = comparar_precios_entre_supermercados(alimentacion_df)
 
     col1, col2 = st.columns([2, 4])
     with col1:
@@ -353,48 +498,23 @@ elif menu == "Precios de Vivienda":
         fecha_fin_vivienda = st.date_input("Fecha de fin", pd.to_datetime("2024-12-31"))
 
         # Filtrar los datos por tipo de producto (venta o alquiler) y rango de fechas
-    df_vivienda_filtrado = vivienda_df[
-        (vivienda_df["producto"] == producto_tipo)
-        & (vivienda_df["fecha"] >= pd.to_datetime(fecha_inicio_vivienda))
-        & (vivienda_df["fecha"] <= pd.to_datetime(fecha_fin_vivienda))
-    ]
-
-    # 1. Provincia más cara y más barata
-    provincia_mas_cara = df_vivienda_filtrado.loc[
-        df_vivienda_filtrado["precio"].idxmax()
-    ]
-    provincia_mas_barata = df_vivienda_filtrado.loc[
-        df_vivienda_filtrado["precio"].idxmin()
-    ]
-
-    # 2. Provincia que más ha aumentado y disminuido en valor
-    df_vivienda_filtrado["diferencia"] = (
-        df_vivienda_filtrado.groupby("provincia")["precio"].diff().fillna(0)
-    )
-    provincia_mayor_aumento = df_vivienda_filtrado.loc[
-        df_vivienda_filtrado["diferencia"].idxmax()
-    ]
-    provincia_mayor_disminucion = df_vivienda_filtrado.loc[
-        df_vivienda_filtrado["diferencia"].idxmin()
-    ]
-
-    # 3. Provincias con más variación en los últimos 30 días
-    ultimo_mes_vivienda = df_vivienda_filtrado[
-        df_vivienda_filtrado["fecha"]
-        >= (df_vivienda_filtrado["fecha"].max() - pd.Timedelta(days=30))
-    ]
-    ultimo_mes_vivienda["variacion"] = (
-        ultimo_mes_vivienda.groupby("provincia")["precio"].pct_change().fillna(0)
+    df_vivienda_filtrado = filter_vivienda_data(
+        vivienda_df=vivienda_df,
+        producto_tipo=producto_tipo,
+        fecha_inicio=fecha_inicio_vivienda,
+        fecha_fin=fecha_fin_vivienda,
     )
 
-    # Seleccionar las 5 provincias que más subieron y más bajaron
-    top_aumento_provincias = ultimo_mes_vivienda.nlargest(5, "variacion")
-    top_disminucion_provincias = ultimo_mes_vivienda.nsmallest(5, "variacion")
-
-    # Concatenar para un gráfico comparativo
-    top_variacion_provincias = pd.concat(
-        [top_aumento_provincias, top_disminucion_provincias]
+    provincia_mas_cara, provincia_mas_barata = obtener_provincia_mas_cara_y_mas_barata(
+        df_vivienda_filtrado
     )
+    provincia_mayor_aumento, provincia_mayor_disminucion = (
+        obtener_provincia_mayor_aumento_y_disminucion(df_vivienda_filtrado)
+    )
+    top_variacion_provincias = obtener_provincias_con_mas_variacion_en_ultimos_30_dias(
+        df_vivienda_filtrado
+    )
+
     st.markdown("")
     # Visualización de las métricas y explicaciones
     st.header(f"Análisis para: {producto_tipo}")
