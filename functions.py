@@ -12,7 +12,7 @@ year_date = datetime.now() - timedelta(days=365)
 
 
 def getAlimentacionJson():
-    myclient = pymongo.MongoClient(st.secrets("chainflation_mongo"))
+    myclient = pymongo.MongoClient(st.secrets["chainflation_mongo"])
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["alimentacion"]
@@ -26,7 +26,7 @@ def getAlimentacionJson():
 
 
 def getViviendaJson():
-    myclient = pymongo.MongoClient(st.secrets("chainflation_mongo"))
+    myclient = pymongo.MongoClient(st.secrets["chainflation_mongo"])
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["vivienda"]
@@ -40,7 +40,7 @@ def getViviendaJson():
 
 
 def getEnergiaJson():
-    myclient = pymongo.MongoClient(st.secrets("chainflation_mongo"))
+    myclient = pymongo.MongoClient(st.secrets["chainflation_mongo"])
     mydb = myclient[DATABASE]
 
     alim_collect = mydb["energia"]
