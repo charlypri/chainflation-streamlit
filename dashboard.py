@@ -9,7 +9,7 @@ import plotly.express as px
 import requests
 from streamlit_option_menu import option_menu
 import plotly.graph_objects as go
-from datetime import datetime, time, date
+from datetime import date
 
 load_dotenv()
 
@@ -193,43 +193,67 @@ def obtener_provincia_mas_cara_y_mas_barata(df_vivienda_filtrado):
     return provincia_mas_cara, provincia_mas_barata
 
 
-def obtener_provincia_mayor_aumento_y_disminucion(df_vivienda_filtrado):
+def obtener_provincia_mayor_aumento_y_bajada(df_vivienda_filtrado):
     """
     Retorna la provincia que más ha aumentado y más ha disminuido en valor.
     """
-    df_vivienda_filtrado["diferencia"] = (
-        df_vivienda_filtrado.groupby("provincia")["precio"].diff().fillna(0)
+    df_vivienda_filtrado = (
+        df_vivienda_filtrado.sort_values(
+            "fecha"
+        )  # Asegurar que los datos están ordenados por fecha
+        .groupby("provincia")
+        .agg(
+            precio_inicio=("precio", "first"),
+            precio_fin=("precio", "last"),
+        )
+        .reset_index()
+        .copy()
     )
+    df_vivienda_filtrado["variacion"] = (
+        df_vivienda_filtrado["precio_fin"] - df_vivienda_filtrado["precio_inicio"]
+    )
+
     provincia_mayor_aumento = df_vivienda_filtrado.loc[
-        df_vivienda_filtrado["diferencia"].idxmax()
+        df_vivienda_filtrado["variacion"].idxmax()
     ]
-    provincia_mayor_disminucion = df_vivienda_filtrado.loc[
-        df_vivienda_filtrado["diferencia"].idxmin()
+    provincia_mayor_bajada = df_vivienda_filtrado.loc[
+        df_vivienda_filtrado["variacion"].idxmin()
     ]
-    return provincia_mayor_aumento, provincia_mayor_disminucion
+    return provincia_mayor_aumento, provincia_mayor_bajada
 
 
-def obtener_provincias_con_mas_variacion_en_ultimos_30_dias(df_vivienda_filtrado):
+def obtener_provincias_con_mas_variacion(df_vivienda_filtrado):
     """
-    Retorna las 5 provincias con mayor y menor variación en los últimos 30 días.
+    Retorna las 5 provincias con mayor y menor variación entre el primer y último día de los datos disponibles.
     """
-    ultimo_mes_vivienda = df_vivienda_filtrado[
-        df_vivienda_filtrado["fecha"]
-        >= (df_vivienda_filtrado["fecha"].max() - pd.Timedelta(days=30))
-    ]
-    ultimo_mes_vivienda["variacion"] = (
-        ultimo_mes_vivienda.groupby("provincia")["precio"].pct_change().fillna(0)
+    # Agrupar por provincia y calcular el precio del primer y último día
+    variacion_provincias = (
+        df_vivienda_filtrado.sort_values(
+            "fecha"
+        )  # Asegurar que los datos están ordenados por fecha
+        .groupby("provincia")
+        .agg(
+            precio_inicio=("precio", "first"),
+            precio_fin=("precio", "last"),
+        )
+        .copy()
     )
 
-    top_aumento_provincias = ultimo_mes_vivienda.nlargest(5, "variacion")
-    top_disminucion_provincias = ultimo_mes_vivienda.nsmallest(5, "variacion")
+    # Calcular la variación porcentual entre el primer y último día
+    variacion_provincias["variacion"] = (
+        variacion_provincias["precio_fin"] - variacion_provincias["precio_inicio"]
+    ) / variacion_provincias["precio_inicio"]
+
+    # Seleccionar las 5 provincias con mayor aumento y mayor bajada
+    top_aumento_provincias = variacion_provincias.nlargest(5, "variacion")
+    top_bajada_provincias = variacion_provincias.nsmallest(5, "variacion")
 
     # Concatenar para un gráfico comparativo
     top_variacion_provincias = pd.concat(
-        [top_aumento_provincias, top_disminucion_provincias]
-    )
+        [top_aumento_provincias, top_bajada_provincias]
+    ).reset_index()
 
-    return top_variacion_provincias
+    return top_variacion_provincias.sort_values("variacion")
 
 
 def obtener_producto_mas_caro_y_mas_barato(df_filtrado):
@@ -241,7 +265,7 @@ def obtener_producto_mas_caro_y_mas_barato(df_filtrado):
     return producto_mas_caro, producto_mas_barato
 
 
-def obtener_producto_mayor_aumento_y_disminucion(df_filtrado):
+def obtener_producto_mayor_aumento_y_bajada(df_filtrado):
     """
     Retorna el producto que más ha aumentado y más ha disminuido en valor.
     """
@@ -249,30 +273,40 @@ def obtener_producto_mayor_aumento_y_disminucion(df_filtrado):
         df_filtrado.groupby("producto")["precio_referencia"].diff().fillna(0)
     )
     producto_mayor_aumento = df_filtrado.loc[df_filtrado["diferencia"].idxmax()]
-    producto_mayor_disminucion = df_filtrado.loc[df_filtrado["diferencia"].idxmin()]
-    return producto_mayor_aumento, producto_mayor_disminucion
+    producto_mayor_bajada = df_filtrado.loc[df_filtrado["diferencia"].idxmin()]
+    return producto_mayor_aumento, producto_mayor_bajada
 
 
-def obtener_productos_con_mas_variacion_ultima_semana(df_filtrado):
+def obtener_productos_con_mas_variacion(df_filtrado):
     """
-    Retorna los 5 productos con mayor aumento y los 5 con mayor disminución en la última semana.
+    Retorna los 5 productos con mayor aumento y los 5 con mayor bajada
+    entre el primer y último día de los datos disponibles.
     """
-    ultima_semana = df_filtrado[
-        df_filtrado["fecha"] >= (df_filtrado["fecha"].max() - pd.Timedelta(days=14))
-    ]
-    ultima_semana["variacion"] = (
-        ultima_semana.groupby("producto")["precio_referencia"]
-        .pct_change(periods=14)
-        .fillna(0)
+    # Agrupar por producto y calcular el precio inicial y final
+    variacion_productos = (
+        df_filtrado.sort_values(
+            "fecha"
+        )  # Asegurar que los datos están ordenados por fecha
+        .groupby("producto")
+        .agg(
+            precio_inicio=("precio_referencia", "first"),
+            precio_fin=("precio_referencia", "last"),
+        )
     )
 
-    top_aumento = ultima_semana.nlargest(5, "variacion")
-    top_disminucion = ultima_semana.nsmallest(5, "variacion")
+    # Calcular la variación porcentual entre el primer y último día
+    variacion_productos["variacion"] = (
+        variacion_productos["precio_fin"] - variacion_productos["precio_inicio"]
+    ) / variacion_productos["precio_inicio"]
+
+    # Seleccionar los 5 productos con mayor aumento y mayor bajada
+    top_aumento = variacion_productos.nlargest(5, "variacion")
+    top_bajada = variacion_productos.nsmallest(5, "variacion")
 
     # Concatenar para un gráfico comparativo
-    top_variacion = pd.concat([top_aumento, top_disminucion])
+    top_variacion = pd.concat([top_aumento, top_bajada]).reset_index()
 
-    return top_variacion
+    return top_variacion.sort_values("variacion")
 
 
 def comparar_precios_entre_supermercados(alimentacion_df):
@@ -288,6 +322,145 @@ def comparar_precios_entre_supermercados(alimentacion_df):
         precios_promedio.groupby("producto")["precio_referencia"].idxmin()
     ]
     return productos_mas_baratos
+
+
+def display_visualizations(df_vivienda_filtrado, top_variacion_provincias):
+    # Create and show map
+    geojson_provincias, full_data = prepare_geojson(df_vivienda_filtrado)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("🌍 Precios Medio por Provincias en Mapa Coroplético")
+        show_map(geojson_provincias, full_data)
+
+    # Bar chart for prices by province
+    with col2:
+        st.subheader("📊 Provincias ordenadas por precio promedio")
+        show_price_bar_chart(df_vivienda_filtrado)
+
+    # Bar chart for provinces with most price variation
+    st.subheader("📊 Provincias que más han subido y bajado en precio", divider="blue")
+    show_variation_bar_chart(top_variacion_provincias)
+
+
+def prepare_geojson(df_vivienda_filtrado):
+    geojson_url = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/spain-provinces.geojson"
+    response = requests.get(geojson_url)
+    geojson_provincias = response.json()
+
+    # Process GeoJSON and map with province data
+    precios_promedio_provincia = (
+        df_vivienda_filtrado.groupby("provincia")["precio"].mean().reset_index()
+    )
+    full_data = merge_with_geojson(geojson_provincias, precios_promedio_provincia)
+
+    return geojson_provincias, full_data
+
+
+def merge_with_geojson(geojson_provincias, precios_promedio_provincia):
+    geojson_province_names = [
+        feature["properties"]["name"] for feature in geojson_provincias["features"]
+    ]
+    geojson_province_df = pd.DataFrame({"provincia": geojson_province_names})
+
+    province_mapping = {
+        "Zaragoza": "Zaragoza",
+        "València": "València/Valencia",
+        "Sevilla": "Sevilla",
+        "Palma": "Illes Balears",
+        "Murcia": "Murcia",
+        "Málaga": "Málaga",
+        "Madrid": "Madrid",
+        "Córdoba": "Córdoba",
+        "Bilbao": "Bizkaia/Vizcaya",
+        "Barcelona": "Barcelona",
+        "Alicante": "Alacant/Alicante",
+    }
+
+    # Apply mapping
+    precios_promedio_provincia["provincia"] = precios_promedio_provincia[
+        "provincia"
+    ].map(province_mapping)
+
+    full_data = geojson_province_df.merge(
+        precios_promedio_provincia, how="left", on="provincia"
+    )
+    full_data["precio"] = full_data["precio"].fillna(0)
+
+    # Unir los datos del precio con las provincias en el GeoJSON
+    for feature in geojson_provincias["features"]:
+        provincia_name = feature["properties"]["name"]
+        matching_data = precios_promedio_provincia[
+            precios_promedio_provincia["provincia"] == provincia_name
+        ]
+        if not matching_data.empty:
+            feature["properties"]["precio"] = matching_data["precio"].values[
+                0
+            ]  # Añadir el precio a la propiedad
+
+    return full_data
+
+
+def show_map(geojson_provincias, full_data):
+    mapa = folium.Map(
+        location=[40.4168, -3.7038], zoom_start=6, tiles="cartodb positron"
+    )
+
+    choropleth = folium.Choropleth(
+        geo_data=geojson_provincias,
+        name="choropleth",
+        data=full_data,
+        columns=["provincia", "precio"],
+        key_on="feature.properties.name",
+        fill_color="YlGnBu",
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        legend_name="Precio promedio (€/m2)",
+    )
+    choropleth.add_to(mapa)
+
+    folium.GeoJsonTooltip(
+        fields=["name", "precio"],
+        aliases=["Provincia:", "Precio promedio (€/m2):"],
+        localize=True,
+        sticky=False,
+    ).add_to(choropleth.geojson)
+
+    st_data = st_folium(mapa, width=700)
+
+
+def show_price_bar_chart(df_vivienda_filtrado):
+    precios_promedio_provincia = (
+        df_vivienda_filtrado.groupby("provincia")["precio"].mean().reset_index()
+    )
+    fig_bar_provincias = px.bar(
+        precios_promedio_provincia.sort_values("precio", ascending=False),
+        x="provincia",
+        y="precio",
+        color="precio",
+        title="Provincias ordenadas por precio promedio",
+        labels={"precio": "Precio promedio (€)", "provincia": "Provincia"},
+        color_continuous_scale=px.colors.sequential.Blues,
+    )
+    fig_bar_provincias.update_layout(
+        yaxis_title="Precio promedio (€)", xaxis_title="Provincia", height=650
+    )
+    st.plotly_chart(fig_bar_provincias, use_container_width=True)
+
+
+def show_variation_bar_chart(top_variacion_provincias):
+    fig_variacion_provincias = px.bar(
+        top_variacion_provincias,
+        x="provincia",
+        y="variacion",
+        color="variacion",
+        labels={"variacion": "Cambio porcentual (%)", "provincia": "Provincia"},
+        color_continuous_scale=["red", "green"],
+    )
+    fig_variacion_provincias.update_layout(
+        barmode="group", yaxis_title="Cambio porcentual (%)", xaxis_title="Provincia"
+    )
+    st.plotly_chart(fig_variacion_provincias, use_container_width=True)
 
 
 # Cargar los datos
@@ -356,18 +529,11 @@ if menu == "Precios de Alimentos":
     producto_mas_caro, producto_mas_barato = obtener_producto_mas_caro_y_mas_barato(
         df_filtrado
     )
-    producto_mayor_aumento, producto_mayor_disminucion = (
-        obtener_producto_mayor_aumento_y_disminucion(df_filtrado)
+    producto_mayor_aumento, producto_mayor_bajada = (
+        obtener_producto_mayor_aumento_y_bajada(df_filtrado)
     )
-    top_variacion = obtener_productos_con_mas_variacion_ultima_semana(df_filtrado)
+    top_variacion = obtener_productos_con_mas_variacion(df_filtrado)
     productos_mas_baratos = comparar_precios_entre_supermercados(alimentacion_df)
-
-    col1, col2 = st.columns([2, 4])
-    with col1:
-        with st.container(border=True):
-            # Visualización de las métricas y explicaciones
-            st.header(f"Supermercado: {supermercado_seleccionado}")
-            st.markdown("")
 
     # Métricas con tarjetas (Cards) explicadas
     st.markdown("")
@@ -407,10 +573,10 @@ if menu == "Precios de Alimentos":
     with col4:
         with st.container(border=True):
             st.metric(
-                label="Mayor disminución de precio",
-                value=f"{producto_mayor_disminucion['producto']}",
-                delta=f"{producto_mayor_disminucion['diferencia']:.2f}€",
-                help="Este producto ha tenido el mayor disminución en su precio durante el periodo seleccionado.",
+                label="Mayor bajada de precio",
+                value=f"{producto_mayor_bajada['producto']}",
+                delta=f"{producto_mayor_bajada['diferencia']:.2f}€",
+                help="Este producto ha tenido el mayor bajada en su precio durante el periodo seleccionado.",
             )
 
     # Gráfico interactivo con Plotly: evolución de precios en el tiempo
@@ -480,47 +646,39 @@ if menu == "Precios de Alimentos":
         st.plotly_chart(fig_pie, use_container_width=True)
 
 elif menu == "Precios de Vivienda":
-    # Filtro de Venta o Alquiler
     st.title("🏡 Análisis de Precios de Vivienda por Provincias")
     st.divider()
 
-    # Filtro de fechas
+    # Filters
     col1, col2, col3 = st.columns([1, 2, 2])
     with col1:
         producto_tipo = st.radio(
             "Selecciona si es venta o alquiler", ["Venta", "Alquiler"]
         )
     with col2:
-        fecha_inicio_vivienda = st.date_input(
-            "Fecha de inicio", pd.to_datetime("2024-01-01")
-        )
+        fecha_inicio = st.date_input("Fecha de inicio", pd.to_datetime("2024-01-01"))
     with col3:
-        fecha_fin_vivienda = st.date_input("Fecha de fin", pd.to_datetime("2024-12-31"))
+        fecha_fin = st.date_input("Fecha de fin", pd.to_datetime("2024-12-31"))
 
-        # Filtrar los datos por tipo de producto (venta o alquiler) y rango de fechas
-    df_vivienda_filtrado = filter_vivienda_data(
-        vivienda_df=vivienda_df,
-        producto_tipo=producto_tipo,
-        fecha_inicio=fecha_inicio_vivienda,
-        fecha_fin=fecha_fin_vivienda,
+    df_vivienda_filtrado = vivienda_df[
+        (vivienda_df["producto"] == producto_tipo)
+        & (vivienda_df["fecha"] >= pd.to_datetime(fecha_inicio))
+        & (vivienda_df["fecha"] <= pd.to_datetime(fecha_fin))
+    ]
+
+    # Compute metrics
+
+    provincia_mayor_aumento, provincia_mayor_bajada = (
+        obtener_provincia_mayor_aumento_y_bajada(df_vivienda_filtrado)
     )
-
     provincia_mas_cara, provincia_mas_barata = obtener_provincia_mas_cara_y_mas_barata(
         df_vivienda_filtrado
     )
-    provincia_mayor_aumento, provincia_mayor_disminucion = (
-        obtener_provincia_mayor_aumento_y_disminucion(df_vivienda_filtrado)
-    )
-    top_variacion_provincias = obtener_provincias_con_mas_variacion_en_ultimos_30_dias(
+    top_variacion_provincias = obtener_provincias_con_mas_variacion(
         df_vivienda_filtrado
     )
 
-    st.markdown("")
-    # Visualización de las métricas y explicaciones
-    st.header(f"Análisis para: {producto_tipo}")
-    st.markdown("")
-    # Métricas con tarjetas (Cards) explicadas
-    st.subheader("🏷️ Provincias clave", divider="blue")
+    # Display metrics and explanation
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -540,98 +698,23 @@ elif menu == "Precios de Vivienda":
                 delta=f"{provincia_mas_barata['precio']:.2f}€",
                 help=f"Esta es la provincia más barata para {producto_tipo} en el mismo periodo.",
             )
-
     with col3:
         with st.container(border=True):
             st.metric(
                 label="Mayor aumento de precio",
                 value=f"{provincia_mayor_aumento['provincia']}",
-                delta=f"{provincia_mayor_aumento['diferencia']:.2f}€",
+                delta=f"{provincia_mayor_aumento['variacion']:.2f}€",
                 help="Esta provincia ha tenido el mayor aumento de precios.",
             )
 
     with col4:
         with st.container(border=True):
             st.metric(
-                label="Mayor disminución de precio",
-                value=f"{provincia_mayor_disminucion['provincia']}",
-                delta=f"{provincia_mayor_disminucion['diferencia']:.2f}€",
-                help="Esta provincia ha tenido el mayor diminución de precios.",
+                label="Mayor bajada de precio",
+                value=f"{provincia_mayor_bajada['provincia']}",
+                delta=f"{provincia_mayor_bajada['variacion']:.2f}€",
+                help="Esta provincia ha tenido la mayor bajada de precios.",
             )
 
-    # Filtrar los datos por tipo de producto (venta o alquiler) y rango de fechas
-    df_vivienda_filtrado = vivienda_df[
-        (vivienda_df["producto"] == producto_tipo)
-        & (vivienda_df["fecha"] >= pd.to_datetime(fecha_inicio_vivienda))
-        & (vivienda_df["fecha"] <= pd.to_datetime(fecha_fin_vivienda))
-    ]
-
-    # Agrupar los precios promedio por provincia
-    precios_promedio_provincia = (
-        df_vivienda_filtrado.groupby("provincia")["precio"].mean().reset_index()
-    )
-
-    # Descargar el geojson de las provincias de España para el mapa
-    geojson_url = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/spain-provinces.geojson"
-    response = requests.get(geojson_url)
-    geojson_provincias = response.json()
-
-    # Mostrar mapa en Streamlit
-    col1, col2 = st.columns(2)
-    with col1:
-        # Crear mapa coroplético con Folium
-        st.subheader("🌍 Precios por Provincias en Mapa Coroplético")
-
-        # Crear el mapa base centrado en España
-        mapa = folium.Map(
-            location=[40.4168, -3.7038], zoom_start=6, tiles="cartodb positron"
-        )
-
-        # Añadir capa de Choropleth (Mapa Coroplético)
-        folium.Choropleth(
-            geo_data=geojson_provincias,
-            name="choropleth",
-            data=precios_promedio_provincia,
-            columns=["provincia", "precio"],
-            key_on="feature.properties.name",  # Asegúrate de que 'name' coincide con las provincias
-            fill_color="YlGnBu",
-            fill_opacity=0.7,
-            line_opacity=0.2,
-            legend_name="Precio promedio (€)",
-        ).add_to(mapa)
-        st_data = st_folium(mapa, width=700)
-
-    # Gráfico de barras con precios por provincia
-    with col2:
-        st.subheader(" 📊 Provincias ordenadas por precio promedio")
-        fig_bar_provincias = px.bar(
-            precios_promedio_provincia.sort_values("precio", ascending=False),
-            x="provincia",
-            y="precio",
-            color="precio",
-            title="Provincias ordenadas por precio promedio",
-            labels={"precio": "Precio promedio (€)", "provincia": "Provincia"},
-            color_continuous_scale=px.colors.sequential.Blues,
-        )
-        fig_bar_provincias.update_layout(
-            yaxis_title="Precio promedio (€)", xaxis_title="Provincia", height=650
-        )
-        st.plotly_chart(fig_bar_provincias, use_container_width=True)
-
-        # Gráfico de barras para las provincias con mayor variación
-    st.subheader(
-        "📊 Provincias que más han subido y bajado en precio en el último mes",
-        divider="blue",
-    )
-    fig_variacion_provincias = px.bar(
-        top_variacion_provincias,
-        x="provincia",
-        y="variacion",
-        color="variacion",
-        labels={"variacion": "Cambio porcentual (%)", "provincia": "Provincia"},
-        color_continuous_scale=["red", "green"],
-    )
-    fig_variacion_provincias.update_layout(
-        barmode="group", yaxis_title="Cambio porcentual (%)", xaxis_title="Provincia"
-    )
-    st.plotly_chart(fig_variacion_provincias, use_container_width=True)
+    # Map and bar chart visualizations
+    display_visualizations(df_vivienda_filtrado, top_variacion_provincias)
