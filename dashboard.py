@@ -123,6 +123,22 @@ def plot_inflation_trend(category_infl, date_range):
                 y=category_data["inflation"],
                 mode="lines+markers",
                 name=category.capitalize(),
+                marker=dict(
+                    size=15,
+                    line=dict(
+                        width=0,  # Set to 0 to remove the border
+                        color="rgba(0,0,0,0)"  # Transparent border color
+                    )
+                ),
+                line=dict(width=4),
+                hoverlabel=dict(
+                    font=dict(
+                        size=20  # Set the desired font size
+                    )
+                ),
+                hovertemplate="%{x}<br>Inflation: %{y:.1f}%<extra></extra>"
+
+
             )
         )
 
@@ -130,10 +146,15 @@ def plot_inflation_trend(category_infl, date_range):
         xaxis_title="Fecha",
         yaxis_title="Inflación (%)",
         height=600,
-        title="Inflación YoY de Chainflation",
-        legend=dict(
+        title=dict(
+            text="Inflación YoY de Chainflation",
             font=dict(
                 size=30,
+            )
+        ),
+        legend=dict(
+            font=dict(
+                size=25,
             )
         ),
         xaxis=dict(
@@ -146,6 +167,9 @@ def plot_inflation_trend(category_infl, date_range):
             titlefont=dict(size=30),
             tickfont=dict(size=25),
         ),
+        font=dict(
+            size=24,
+        )
     )
     return fig
 
@@ -176,7 +200,7 @@ def display_metrics(category_infl, metric_type):
                 label=f"{category.capitalize()}",
                 value=month,
                 delta=f"{value:.2f}%",
-                delta_color="inverse" if metric_type == "max" else "normal",
+                delta_color="inverse"
             )
 
 
@@ -269,11 +293,29 @@ def obtener_producto_mayor_aumento_y_bajada(df_filtrado):
     """
     Retorna el producto que más ha aumentado y más ha disminuido en valor.
     """
-    df_filtrado["diferencia"] = (
-        df_filtrado.groupby("producto")["precio_referencia"].diff().fillna(0)
+    variacion_productos = (
+        df_filtrado.sort_values(
+            "fecha"
+        )  # Asegurar que los datos están ordenados por fecha
+        .groupby("producto")
+        .agg(
+            precio_inicio=("precio", "first"),
+            precio_fin=("precio", "last"),
+        )
+        .reset_index()
+        .copy()
     )
-    producto_mayor_aumento = df_filtrado.loc[df_filtrado["diferencia"].idxmax()]
-    producto_mayor_bajada = df_filtrado.loc[df_filtrado["diferencia"].idxmin()]
+
+    variacion_productos["diferencia"] = (
+        variacion_productos["precio_fin"] - variacion_productos["precio_inicio"]
+    )
+
+    producto_mayor_aumento = variacion_productos.loc[
+        variacion_productos["diferencia"].idxmax()
+    ]
+    producto_mayor_bajada = variacion_productos.loc[
+        variacion_productos["diferencia"].idxmin()
+    ]
     return producto_mayor_aumento, producto_mayor_bajada
 
 
